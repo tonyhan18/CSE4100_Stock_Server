@@ -24,8 +24,18 @@ int main(int argc, char **argv)
     while (Fgets(buf, MAXLINE, stdin) != NULL)
     {
         Rio_writen(clientfd, buf, strlen(buf));
-        Rio_readlineb(&rio, buf, MAXLINE);
-        Fputs(buf, stdout);
+        printf("--------------\n");
+        int n;
+        while((n = Rio_readlineb(&rio, buf, MAXLINE)) != 0)
+        {
+            //printf("n : %d\n",n);
+            if(strncmp(buf, "EOF",3) == 0)
+                break;
+            if(strncmp(buf,"exit",4) == 0)
+                exit(0);
+            Rio_writen(STDOUT_FILENO, buf, n);
+        }
+        printf("--------------\n");
     }
     Close(clientfd); //line:netp:echoclient:close
     exit(0);
