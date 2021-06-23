@@ -281,16 +281,9 @@ int main(int argc, char **argv)
                         //printf(">>> token : %s | buf : %s <<<\n",token, buf);
                         if(strncmp(token, "show", 4) == 0)
                         {
-                            //printf(">>> stop <<<\n");
-                            // tablePreOrder(root, i);
-                            // strcpy(ans,"EOF\n");
-                            // Rio_writen(i,ans,strlen(ans));
-                            //printf("the end\n");
                             tablePreOrder2(root, ans);
-                            //printf("|%s| %d",ans,strlen(ans));
                             ans[strlen(ans)] = '\0';
                             Rio_writen(i,ans,strlen(ans));
-                            //printf("|%s| %d",ans,strlen(ans));
                         }
                         else if(strncmp(token, "buy", 3) == 0)
                         {
@@ -316,10 +309,12 @@ int main(int argc, char **argv)
                         }
                         else if(strncmp(token, "exit", 4) == 0)
                         {
+                            printf("exit\n");
                             strcpy(ans,"exit\n");
                             Rio_writen(i,ans,strlen(ans));
                             Close(i);
                             FD_CLR(i, &master);
+                            continue;
                         }
                         else
                         {
