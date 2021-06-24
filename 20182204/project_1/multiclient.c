@@ -15,6 +15,10 @@ int main(int argc, char **argv)
 	char *host, *port, buf[MAXLINE], tmp[3];
 	rio_t rio;
 
+	/* >>>>>>>>>> time chk <<<<<<<<<<<< */
+	// time_t start, end;
+	// double result;
+
 	if (argc != 4)
 	{
 		fprintf(stderr, "usage: %s <host> <port> <client#>\n", argv[0]);
@@ -24,6 +28,9 @@ int main(int argc, char **argv)
 	host = argv[1];
 	port = argv[2];
 	num_client = atoi(argv[3]);
+
+	/* >>>>>>>>>> time chk <<<<<<<<<<<< */
+	//start = time(NULL);
 
 	/*	fork for each client process	*/
 	while (runprocess < num_client)
@@ -44,7 +51,8 @@ int main(int argc, char **argv)
 
 			for (i = 0; i < ORDER_PER_CLIENT; i++)
 			{
-				int option = rand() % 3;
+				int option = (rand() % 3);
+				//option = 0;
 
 				if (option == 0)
 				{ //show
@@ -86,13 +94,15 @@ int main(int argc, char **argv)
 					if (strncmp(buf, "EOF", 3) == 0)
 						break;
 					if(strncmp(buf,"exit",4) == 0)
-						exit(0);
+						break;
 					Rio_writen(STDOUT_FILENO, buf, n);
 				}
 
 				usleep(1000000);
 			}
 
+			strcpy(buf, "disc\n");
+			Rio_writen(clientfd, buf, strlen(buf));
 			Close(clientfd);
 			exit(0);
 		}
@@ -108,6 +118,11 @@ int main(int argc, char **argv)
 	{
 		waitpid(pids[i], &status, 0);
 	}
+
+	/* >>>>>>>>>> time chk <<<<<<<<<<<< */
+			// end = time(NULL);
+			// result = (double)(end - start);
+			// printf("time : %fs\n", result);
 
 	/*clientfd = Open_clientfd(host, port);
 	Rio_readinitb(&rio, clientfd);

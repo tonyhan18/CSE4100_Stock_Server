@@ -104,16 +104,17 @@ void preOrder(item *root)
     }
 }
 
-void tablePreOrder(item *root, int i)
+void tablePreOrder(item *root, FILE *fp)
 {
     if (root)
     {
-        char ans[MAXLINE];
-        sprintf(ans, "%d %d %d\n", root->ID, root->readcnt, root->price);
-        Rio_writen(i,ans,strlen(ans));
-        printf("ans : %s\n",ans);
-        tablePreOrder(root->left_stock,i);
-        tablePreOrder(root->right_stock,i);
+        char tmp[MAXLINE];
+        P(&root->mutex);
+        sprintf(tmp, "%d %d %d\n", root->ID, root->readcnt, root->price);
+        Fputs(tmp, fp);
+        tablePreOrder(root->left_stock, fp);
+        tablePreOrder(root->right_stock, fp);
+        V(&root->mutex);
     }
 }
 
@@ -122,10 +123,12 @@ void tablePreOrder2(item *root, char *ans)
     if (root)
     {
         char tmp[MAXLINE];
+        P(&root->mutex);
         sprintf(tmp, "%d %d %d\n", root->ID, root->readcnt, root->price);
-        strcat(ans,tmp);
+        strcat(ans, tmp);
         tablePreOrder2(root->left_stock, ans);
         tablePreOrder2(root->right_stock, ans);
+        V(&root->mutex);
     }
 }
 
@@ -156,35 +159,46 @@ item *tableInit(void)
     return (root);
 }
 
-int buyStock(item * root,int ID,int readcnt)
+int tableSaved(item *root)
 {
-    item * node;
-    if((node = searchNode(root,ID)) == NULL)
+    FILE *fp = Fopen("stock.txt", "w");
+    if (!fp)
+        return (0);
+    tablePreOrder(root, fp);
+    Fclose(fp);
+    return (1);
+}
+
+int buyStock(item *root, int ID, int readcnt)
+{
+    item *node;
+    if ((node = searchNode(root, ID)) == NULL)
     {
         return 0;
     }
-    
+
     P(&node->mutex);
-    if(node->readcnt >= readcnt)
+    if (node->readcnt >= readcnt)
     {
         node->readcnt -= readcnt;
         V(&node->mutex);
         return 1;
-    }else
+    }
+    else
     {
         V(&node->mutex);
         return 0;
-    }    
+    }
 }
 
-int sellStock(item * root,int ID,int readcnt)
+int sellStock(item *root, int ID, int readcnt)
 {
-    item * node;
-    if((node = searchNode(root,ID)) == NULL)
+    item *node;
+    if ((node = searchNode(root, ID)) == NULL)
     {
         return 0;
     }
-    
+
     P(&node->mutex);
     node->readcnt += readcnt;
     V(&node->mutex);
@@ -197,8 +211,8 @@ int main(int argc, char **argv)
     int connfd;   //new_fd
     int numbytes;
     char buf[MAXBUF];
-    struct addrinfo hints, *servinfo;
-    int rv;
+    //struct addrinfo hints, *servinfo;
+    //int rv;
     char client_hostname[MAXLINE], client_port[MAXLINE];
 
     /* Enough space for any address */  //line:netp:echoserveri:sockaddrstorage
@@ -215,14 +229,13 @@ int main(int argc, char **argv)
     }
     listenfd = Open_listenfd(argv[1]);
     item *root = tableInit();
-    
 
     FD_SET(listenfd, &master);
     fdmax = listenfd;
 
     while (1)
     {
-        preOrder(root); //print graph
+        //preOrder(root); //print graph
         read_fds = master;
         Select(fdmax + 1, &read_fds, NULL, NULL, NULL);
 
@@ -254,78 +267,78 @@ int main(int argc, char **argv)
                 else
                 {
                     rio_t rio;
+                    char ans[MAXLINE] = "";
 
                     Rio_readinitb(&rio, i);
                     if ((numbytes = Rio_readlineb(&rio, buf, MAXLINE)) <= 0)
                     {
-                        if (numbytes == 0)
-                        {
-                            printf("selectserver: socket %d hung up\n", i);
-                        } // end of connection
-                        else
-                        {
-                            perror("recv");
-                        }
+                        strcpy(ans, "exit\n");
+                        Rio_writen(i, ans, strlen(ans));
                         Close(i);
                         FD_CLR(i, &master);
+                        tableSaved(root);
                     } // end of doesn't recv items or end of socket
                     else
                     {
                         buf[numbytes] = '\0';
                         printf("server received %d bytes\n", numbytes);
                         char tmp[MAXLINE];
-                        strcpy(tmp,buf);
+                        strcpy(tmp, buf);
 
-                        char ans[MAXLINE] = "";
                         char *token = strtok(tmp, LIMITER);
                         //printf(">>> token : %s | buf : %s <<<\n",token, buf);
-                        if(strncmp(token, "show", 4) == 0)
+                        if (strncmp(token, "show", 4) == 0)
                         {
                             tablePreOrder2(root, ans);
                             ans[strlen(ans)] = '\0';
-                            Rio_writen(i,ans,strlen(ans));
+                            Rio_writen(i, ans, strlen(ans));
                         }
-                        else if(strncmp(token, "buy", 3) == 0)
+                        else if (strncmp(token, "buy", 3) == 0)
                         {
-                            int ID = atoi(strtok(NULL,LIMITER));
-                            int readcnt = atoi(strtok(NULL,LIMITER));
-                            if(buyStock(root,ID,readcnt))
+                            int ID = atoi(strtok(NULL, LIMITER));
+                            int readcnt = atoi(strtok(NULL, LIMITER));
+                            if (buyStock(root, ID, readcnt))
                             {
-                                strcpy(buf,"[buy] success\n");
-                            }else{
-                                strcpy(buf,"Not enough left stock\n");
+                                strcpy(buf, "[buy] success\n");
+                            }
+                            else
+                            {
+                                strcpy(buf, "Not enough left stock\n");
                             }
                             Rio_writen(i, buf, strlen(buf));
                         }
-                        else if(strncmp(token, "sell", 4) == 0)
+                        else if (strncmp(token, "sell", 4) == 0)
                         {
-                            int ID = atoi(strtok(NULL,LIMITER));
-                            int readcnt = atoi(strtok(NULL,LIMITER));
-                            if(sellStock(root,ID,readcnt))
+                            int ID = atoi(strtok(NULL, LIMITER));
+                            int readcnt = atoi(strtok(NULL, LIMITER));
+                            if (sellStock(root, ID, readcnt))
                             {
-                                strcpy(buf,"[Sell] success\n");
+                                strcpy(buf, "[Sell] success\n");
                                 Rio_writen(i, buf, strlen(buf));
                             }
                         }
-                        else if(strncmp(token, "exit", 4) == 0)
+                        else if (strncmp(token, "exit", 4) == 0)
                         {
                             printf("exit\n");
-                            strcpy(ans,"exit\n");
-                            Rio_writen(i,ans,strlen(ans));
+                            strcpy(ans, "exit\n");
+                            Rio_writen(i, ans, strlen(ans));
+                            tableSaved(root);
                             Close(i);
                             FD_CLR(i, &master);
                             continue;
                         }
-                        else
+                        else if (strncmp(token, "disc", 4) == 0)
                         {
-                            Rio_writen(i,buf,strlen(buf));
+                            tableSaved(root);
+                            continue;
                         }
-                        strcpy(ans,"EOF\n");
-                        Rio_writen(i,ans,strlen(ans));
+                        tableSaved(root);
+                        strcpy(ans, "EOF\n");
+                        Rio_writen(i, ans, strlen(ans));
                     } // end of recv items
-                } // End of receive msg
+                }     // End of receive msg
             }
-        }   
+        }
     }
     exit(0);
 }
