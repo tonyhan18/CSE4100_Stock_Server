@@ -249,14 +249,14 @@ void *thread(void *vargp)
 
             char *token = strtok(tmp, LIMITER);
             //printf(">>> token : %s | buf : %s <<<\n",token, buf);
-            printf("client : %s\n",buf);
+            //printf("client : %s\n",buf);
             if (strncmp(token, "show", 4) == 0)
             {
                 //printf("show\n");
                 tablePreOrder2(root, ans);
                 ans[strlen(ans)] = '\0';
                 Rio_writen(fd, ans, strlen(ans));
-                printf("ans : %s\n",ans);
+                //printf("ans : %s\n",ans);
                 strcpy(ans, "EOF\n");
                 Rio_writen(fd, ans, strlen(ans));
             }

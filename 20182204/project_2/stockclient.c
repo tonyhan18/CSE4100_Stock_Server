@@ -29,7 +29,7 @@ int main(int argc, char **argv)
         int n;
         while((n = Rio_readlineb(&rio, buf, MAXLINE)) != 0)
         {
-            printf("server : %s\n",buf);
+            //printf("server : %s\n",buf);
             if(strncmp(buf, "EOF",3) == 0)
                 break;
             if(strncmp(buf,"exit",4) == 0)
