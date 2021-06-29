@@ -126,8 +126,8 @@ void tablePreOrder2(item *root, char *ans)
 {
     if (root)
     {
-        P(&root->mutex);
         char tmp[MAXLINE];
+        P(&root->mutex);
         sprintf(tmp, "%d %d %d\n", root->ID, root->readcnt, root->price);
         strcat(ans, tmp);
         tablePreOrder2(root->left_stock, ans);
@@ -223,13 +223,13 @@ void *thread(void *vargp)
     Pthread_detach(pthread_self());
 
     int fd = *((int *)vargp);
-    char ans[MAXLINE] = "";
 
     //change test
     while (1)
     {
         int numbytes;
         rio_t rio;
+        char ans[MAXLINE] = "";
 
         Rio_readinitb(&rio, fd);
         if ((numbytes = Rio_readlineb(&rio, buf, MAXLINE)) <= 0)
@@ -249,17 +249,20 @@ void *thread(void *vargp)
 
             char *token = strtok(tmp, LIMITER);
             //printf(">>> token : %s | buf : %s <<<\n",token, buf);
+            printf("client : %s\n",buf);
             if (strncmp(token, "show", 4) == 0)
             {
                 //printf("show\n");
                 tablePreOrder2(root, ans);
                 ans[strlen(ans)] = '\0';
                 Rio_writen(fd, ans, strlen(ans));
+                printf("ans : %s\n",ans);
                 strcpy(ans, "EOF\n");
                 Rio_writen(fd, ans, strlen(ans));
             }
             else if (strncmp(token, "buy", 3) == 0)
             {
+                //printf("buy\n");
                 int ID = atoi(strtok(NULL, LIMITER));
                 int readcnt = atoi(strtok(NULL, LIMITER));
                 if (buyStock(root, ID, readcnt))
@@ -276,6 +279,7 @@ void *thread(void *vargp)
             }
             else if (strncmp(token, "sell", 4) == 0)
             {
+                //printf("sell\n");
                 int ID = atoi(strtok(NULL, LIMITER));
                 int readcnt = atoi(strtok(NULL, LIMITER));
                 if (sellStock(root, ID, readcnt))
@@ -296,8 +300,13 @@ void *thread(void *vargp)
                 break;
             }else if (strncmp(token, "disc", 4) == 0)
             {
+                //printf("disc\n");
                 tableSaved(root);
                 break;
+            } else {
+                //printf("EOF\n");
+                strcpy(ans, "EOF\n");
+                Rio_writen(fd, ans, strlen(ans));
             }
             tableSaved(root);
         } // end of recv items

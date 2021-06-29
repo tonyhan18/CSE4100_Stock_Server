@@ -31,13 +31,12 @@ int main(int argc, char **argv)
             if(strncmp(buf, "EOF",3) == 0)
                 break;
             if(strncmp(buf,"exit",4) == 0)
-            {
-                Close(clientfd);
-                exit(0);
-            }
+                break;
             Rio_writen(STDOUT_FILENO, buf, n);
         }
     }
+    strcpy(buf, "disc\n");
+    Rio_writen(clientfd, buf, strlen(buf));
     Close(clientfd); //line:netp:echoclient:close
     exit(0);
 }
